@@ -78,15 +78,17 @@
     ("paper"
      ("a4" "letter" "xdvi" "pdftex" "dvips" "dvipdfmx" "dvipdfm" "context")
      (lambda ()
-       (if (member (pcomplete-arg 1) '("a4" "paper"))
-           (pcomplete-dirs-or-entries)
+       (unless (member (pcomplete-arg 1) '("a4" "letter"))
          (pcomplete-here* '("paper"))
          (pcomplete-here* '("a4" "letter")))))
     ("platform" ("list" "add" "remove"))
     ("print-platform" ("collections" "schemes"))
+    ("arch" ("list" "add" "remove"))
+    ("print-arch" ("collections" "schemes"))
+    ("info" ("collections" "schemes"))
     ("search")
     ("dump-tlpdb")
-    ("check" ("files" "depends" "executes" "runfiles"))
+    ("check" ("files" "depends" "executes" "runfiles" "all"))
     ("path" ("add" "remove"))
     ("postaction" ("install" "remove") ("shortcut" "fileassoc" "script"))
     ("uninstall")
@@ -96,7 +98,7 @@
                  "language.dat.lua"
                  "fmtutil"))))
 
-(defvar pcmpl-tlmgr-options-cache (make-hash-table :size 23 :test 'equal))
+(defvar pcmpl-tlmgr-options-cache (make-hash-table :size 31 :test 'equal))
 
 (defun pcmpl-tlmgr-action-options (action)
   "Get the list of long options for ACTION."
@@ -104,9 +106,11 @@
       (with-temp-buffer
         (when (zerop (call-process pcmpl-tlmgr-program nil t nil action "-h"))
           (goto-char (point-min))
-          (puthash action (loop while (re-search-forward
-                                       "^[ \t]+\\(--[[:alnum:]-]+=?\\)" nil t)
-                                collect (match-string 1))
+          (puthash action
+                   (cons "--help"
+                         (loop while (re-search-forward
+                                      "^[ \t]+\\(--[[:alnum:]-]+=?\\)" nil t)
+                               collect (match-string 1)))
                    pcmpl-tlmgr-options-cache)
           (pcmpl-tlmgr-action-options action)))
     (gethash action pcmpl-tlmgr-options-cache)))
@@ -120,7 +124,7 @@
                 (all-completions (pcomplete-arg 0) pcmpl-tlmgr-actions))
       (pcomplete-here* (pcomplete-dirs-or-entries))))
   (pcomplete-here* pcmpl-tlmgr-actions)
-  (let ((action (pcomplete-arg 1)))
+  (let ((action (substring-no-properties (pcomplete-arg 1))))
     (while t
       (if (pcomplete-match "^--" 0)
           (pcomplete-here* (pcmpl-tlmgr-action-options action))
